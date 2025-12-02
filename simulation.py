@@ -39,13 +39,14 @@ C_mur = rho_beton * cp_beton * V_mur
 
 # Isolant
 e_iso = 0.1
-k_iso = 0.0375
+k_iso = 0.035
 
 
 # Résistance conduction
 R_dalle = e_dalle / (k_beton * A_dalle)    
 R_mur_cond = e_mur / (k_beton * A_mur)
 R_iso_dalle = e_iso / (k_iso * A_dalle)
+
 
 
 # Convection
@@ -55,15 +56,15 @@ R_air_mur_conv  = 1 / (h_int * A_mur)
 
 
 # Plafond
-R_air_plaf = R_dalle + R_air_plaf_conv
-R_plaf_ext = R_plaf_ext_conv
+R_air_plaf = R_air_plaf_conv
+R_plaf_ext = R_plaf_ext_conv + R_dalle
 
 # Mur
 
 R_air_mur = R_air_mur_conv + R_mur_cond
-R_iso_mur= e_iso / (k_iso * A_mur)
+R_iso_mur= e_iso / (k_iso * A_mur) + R_mur_cond
 
 # Plancher
 
-R_air_plan = R_air_plaf_conv + R_dalle
-R_plan_iso = R_iso_mur
+R_air_plan = R_air_plaf_conv
+R_plan_iso = R_iso_dalle + R_dalle
