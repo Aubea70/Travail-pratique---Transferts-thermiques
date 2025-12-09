@@ -20,7 +20,7 @@ format = "%Y-%m-%d %H:%M"
 time = np.array([dt.strptime(t, format) for t in time_str])
 
 cut_time = dt(2024,1,26,hour=0,minute=0)
-
+s_range = {1:(1,5), 2:(5,9), 3:(9,13), 4:(13,19), 5:(19,23), 6:(23,29)}
 
 
 def check_stratification(plot=True, time_range="all", sensor_range=None):
@@ -44,9 +44,9 @@ def check_stratification(plot=True, time_range="all", sensor_range=None):
         data1, data2, data3 = data1[:,sensor_range[0]-1:sensor_range[1]], data2[:,sensor_range[0]-1:sensor_range[1]], data3[:,sensor_range[0]-1:sensor_range[1]]
     
     # vérification des écarts
-    diff1 = data2 - data1
-    diff2 = data3 - data2
-    diff3 = data3 - data1
+    diff1 = np.subtract(data2, data1)
+    diff2 = np.subtract(data3, data2)
+    diff3 = np.subtract(data3, data1)
     print(f"mean = {round(np.nanmean(diff1),2)}, std = {round(np.nanstd(diff1),2)}, median = {round(np.nanmedian(diff1),2)}, "
           f"max = {round(np.nanmax(diff1),2)}, min = {round(np.nanmin(diff1),2)}")
     print(f"mean = {round(np.nanmean(diff2),2)}, std = {round(np.nanstd(diff2),2)}, median = {round(np.nanmedian(diff2),2)}, "
@@ -68,7 +68,6 @@ def check_stratification(plot=True, time_range="all", sensor_range=None):
 def plot_plates():
     plt.rcParams['date.converter'] = 'concise'
     plates = [0 for i in range(6)]
-    s_range = {1:(1,5), 2:(5,9), 3:(9,13), 4:(13,19), 5:(19,23), 6:(23,29)}
     for i in range(1,7):
         plates[i-1] = np.nansum(np.dstack((data.loc[:, f"T[degC]-Low-S{s_range[i][0]}":f"T[degC]-Low-S{s_range[i][1]}"], data.loc[:, f"T[degC]-Mid-S{s_range[i][0]}":f"T[degC]-Mid-S{s_range[i][1]}"])),2)
         plates[i-1] = np.nansum(np.dstack((plates[i-1], data.loc[:, f"T[degC]-Top-S{s_range[i][0]}":f"T[degC]-Top-S{s_range[i][1]}"])),2) / 3
@@ -86,14 +85,58 @@ def temp_evolution():
 
 def control_rules():
     plot_plates()
+    plt.plot(time,temp, label="Outdoor")
+    plt.legend()
     plt.axhline(y=0, color='black', linestyle='--')
     plt.axhline(y=3, color='red', linestyle='--')
     plt.show()
 
 
+def space_temp(height="avg"):
+    plates = [0 for i in range(6)]
+    if height == "low":
+        temperatures = low
+    elif height == "mid":
+        temperatures = mid
+    elif height == "top":
+        temperatures = top
+    else:
+        temperatures = np.nansum(np.dstack((low, mid)),2)
+        temperatures = np.nansum(np.dstack((temperatures, top)),2) / 3
+
+    colors = ["blue", "red", "green", "orange", "cyan", "magenta"]
+    for i in range (1,7):
+        plates[i-1] = [temperatures[:,s_range[i][0]+1]-1, temperatures[:,s_range[i][0]+2]-1, temperatures[:,s_range[i][0]+3]-1]
+        
+        diff1 = plates[i-1][0] - plates[i-1][1]
+        diff2 = plates[i-1][1] - plates[i-1][2]
+        diff3 = plates[i-1][0] - plates[i-1][2]
+        print(f"Plate {i}: mean = {round(np.nanmean(diff1),2)}, std = {round(np.nanstd(diff1),2)}, median = {round(np.nanmedian(diff1),2)}, "
+          f"max = {round(np.nanmax(diff1),2)}, min = {round(np.nanmin(diff1),2)}")
+        print(f"Plate {i}: mean = {round(np.nanmean(diff2),2)}, std = {round(np.nanstd(diff2),2)}, median = {round(np.nanmedian(diff2),2)}, "
+            f"max = {round(np.nanmax(diff2),2)}, min = {round(np.nanmin(diff2),2)}")
+        print(f"Plate {i}: mean = {round(np.nanmean(diff3),2)}, std = {round(np.nanstd(diff3),2)}, median = {round(np.nanmedian(diff3),2)}, "
+            f"max = {round(np.nanmax(diff3),2)}, min = {round(np.nanmin(diff3),2)}")
+    
+        plt.plot(time,plates[i-1][0],'-', color=colors[i-1], label=f"Plate {i} back")
+        plt.plot(time,plates[i-1][1],'--', color=colors[i-1], label=f"Plate {i} center")
+        plt.plot(time,plates[i-1][2],':', color=colors[i-1], label=f"Plate {i} front")
+    plt.legend()
+    plt.xlabel("Date [-]")
+    plt.ylabel("Température [°C]")
+    plt.show()
 
 
 if __name__ == "__main__":
-    check_stratification()
-    temp_evolution()
-    control_rules()
+    #check_stratification()
+    #temp_evolution()
+    #control_rules()
+    #space_temp(height="avg")
+
+    for i in range(29):
+        plt.plot(time, top[:,i], label=f"S{i}")
+    plt.rcParams['date.converter'] = 'concise'
+    plt.xlabel("Date [-]")
+    plt.ylabel("Température [°C]")
+    plt.legend()
+    plt.show()
