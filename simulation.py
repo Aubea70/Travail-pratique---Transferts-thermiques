@@ -113,6 +113,7 @@ T_sol = np.zeros(len(time))
 T_ex = temp.to_numpy()
 T_surfterre = np.zeros(len(time))
 T_terre = 8     # Température constante à 8 deg C sous le puits
+q_aero = np.zeros(len(time))
 
 # Conditions initiales:
 T_in[0] = np.nanmean(data.loc[0,"T[degC]-Low-S1":"T[degC]-Top-S29"].to_numpy())      # Température air interne initiale (moyenne dans le puits initiale)
@@ -120,17 +121,15 @@ T_plaf[0] = np.nanmean(top[0,:])
 T_mur[0] = np.nanmean(mid[0,:])
 T_sol[0] = np.nanmean(low[0,:])
 T_surfterre[0] = T_ex[0]     # Assume surface de la terre température proche de l'air externe
-# faire un bilan de flux de chaleur pour trouver les autres températures initiales?
+if T_ex[0] < 0:
+    q_aero[0] = 60e3
 
-énergie = 0
+# Calcul
 for i in range(1,len(time)):
-    if T_ex[i-1] < 3:
-        q_aero = 60e3 * dt    #puissance*dt
-        énergie += q_aero
-    else:
-        q_aero = 0
+    if T_ex[i] < 0:
+        q_aero[i] = 60e3    #puissance*dt
 
-    output = np.matmul(mat_inv, [C_air * T_in[i-1]/dt + q_aero,
+    output = np.matmul(mat_inv, [C_air * T_in[i-1]/dt + q_aero[i-1],
                                  C_plafond * T_plaf[i-1]/dt,
                                  C_mur * T_mur[i-1]/dt + 4/R_iso_mur,
                                  C_plancher * T_sol[i-1]/dt + 8/R_plan_iso,
@@ -138,10 +137,14 @@ for i in range(1,len(time)):
                                  -4/R_iso_mur])
     T_in[i], T_plaf[i], T_mur[i], T_sol[i], _, T_surfterre[i] = output
 
-if T_ex[-1] < 3:    # Sinon le dernier temps sera pas checké pour une dépense d'énergie
-    q_aero = 60e3 * dt
-    énergie += q_aero
 
+print(T_in)
+print(T_plaf)
+print(T_mur)
+print(T_sol)
+print(T_ex)
 print(T_surfterre)
+
+énergie = sum(q_aero*dt)
 
 print("Énergie totale consommée :", (énergie/1000)/360, "kWh")
