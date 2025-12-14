@@ -138,13 +138,16 @@ for i in range(1,len(time)):
     T_in[i], T_plaf[i], T_mur[i], T_sol[i], _, T_surfterre[i] = output
 
 
-print(T_in)
-print(T_plaf)
-print(T_mur)
-print(T_sol)
-print(T_ex)
-print(T_surfterre)
+sim_data = pd.DataFrame({"Time":time, "T_in":T_in, "T_plaf":T_plaf, "T_mur":T_mur, "T_sol":T_sol, "T_surfterre":T_surfterre})
+sim_data.to_csv("Simulated_temperatures.csv", index=False)
 
 énergie = sum(q_aero*dt)
 
 print("Énergie totale consommée :", (énergie/1000)/360, "kWh")
+
+plt.plot(time, T_in, label="Simulée")
+plt.plot(time, np.nanmean(data.loc[:,"T[degC]-Low-S1":"T[degC]-Top-S29"].to_numpy(), axis=1), label="Réelle")
+plt.xlabel("Temps")
+plt.ylabel("Température [°C]")
+plt.legend()
+plt.show()
