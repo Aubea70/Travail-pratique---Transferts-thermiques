@@ -1,5 +1,21 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from datetime import datetime as date
+import pandas as pd
+
+
+#lire les données
+data = pd.read_csv("Dataset of weighing station temperature measurements.csv",delimiter=";")
+time_str = data["Time"]
+temp = data["Outdoor temperature [deg. C]"]
+humid = data["Outdoor relative humidity [%]"]
+low = data.loc[:,"T[degC]-Low-S1":"T[degC]-Low-S29"].to_numpy()
+mid = data.loc[:,"T[degC]-Mid-S1":"T[degC]-Mid-S29"].to_numpy()
+top = data.loc[:,"T[degC]-Top-S1":"T[degC]-Top-S29"].to_numpy()
+
+format = "%Y-%m-%d %H:%M"
+time = np.array([date.strptime(t, format) for t in time_str])
+
 
 # -----------------------
 # PARAMÈTRES DU MODÈLE
@@ -21,7 +37,9 @@ V_air = L * W * H   # Vérifier si on enlève les colonnes de béton du volume
 C_air = rho_air * cp_air * V_air
 h_int = 10.45       # Mettre les sources des constantes dans le rapport
 h_ext = 27.8
-débit = ...
+A_craques = 2e-3 * (W*7 + L*2)
+vit_air = 12    # vitesse moyenne de l'air en hiver[m/s]
+débit = rho_air*vit_air*A_craques/2     # divisé par 2 car moitié des craques entrée et l'autre moitié sortie
 
 # Dalle plafond
 e_dalle = 0.4       # On assume l'épaisseur plafond = épaisseur béton. Vérifier si vrai.
@@ -72,27 +90,58 @@ R_plan_iso = R_iso_dalle + R_dalle
 
 
 
-# Conditions initiales:
-data = ...      # Températures externes à simuler
-T_ex = data[0]  # Température de l'air externe
-T_gc = 8        # Température constante à 8 deg C sous le puits
-T_gs = T_ex     # Température de la surface de la terre exposée à l'air extérieur
-T_in = ...      # Température air interne initiale (prendre 1ère valeur des données ou imposer la température seuil de 3 deg?)
-
-
 # --------------------------
 # CALCUL DES FLUX DE CHALEUR
 # --------------------------
 
-matrice  = [    #pour T_a, T_p, T_m, T_s, T_inf, T_gs, 1
-            [(C_air/dt + 2/R_air_plaf_conv + 1/R_air_mur_conv + débit*cp_air), -1/R_air_plaf_conv, -1/R_air_mur_conv, -1/R_air_plaf_conv, 0, 0, 0],
-            [-1/R_air_plaf_conv, (C_plafond/dt + 1/R_air_plaf_conv + 1/R_plaf_ext), 0, 0, -1/R_plaf_ext, 0, 0],
-            [-1/R_air_mur_conv, 0, (C_mur/dt + 1/R_air_mur_conv + 1/R_iso_mur), 0, 0, -1/(2*R_iso_mur), -4/R_iso_mur],
-            [-1/R_air_plaf_conv, 0, 0, (C_plancher/dt + 1/R_air_plaf_conv + 1/R_plan_iso), 0, 0, -8/R_plan_iso],
-            [0, 0, 0, 0, 1, 0, 0],
-            [0, 0, -1/R_iso_mur, 0, 0, (1/(2*R_iso_mur) + 1/R_plaf_ext_conv), 4/R_iso_mur],
-            [0, 0, 0, 0, 0, 0, 1]
+matrice  = [    #pour T_in, T_plaf, T_mur, T_sol, T_ex, T_surfterre
+            [(C_air/dt + 2/R_air_plaf_conv + 1/R_air_mur_conv + débit*cp_air), -1/R_air_plaf_conv, -1/R_air_mur_conv, -1/R_air_plaf_conv, -débit*cp_air, 0],
+            [-1/R_air_plaf_conv, (C_plafond/dt + 1/R_air_plaf_conv + 1/R_plaf_ext), 0, 0, -1/R_plaf_ext, 0],
+            [-1/R_air_mur_conv, 0, (C_mur/dt + 1/R_air_mur_conv + 1/R_iso_mur), 0, 0, -1/(2*R_iso_mur)],
+            [-1/R_air_plaf_conv, 0, 0, (C_plancher/dt + 1/R_air_plaf_conv + 1/R_plan_iso), 0, 0],
+            [0, 0, 0, 0, 1, 0],
+            [0, 0, -1/R_iso_mur, 0, 0, (1/(2*R_iso_mur) + 1/R_plaf_ext_conv)],
             ]
 
 # M*T(t) = T(t-dt) -> T(t) = M**(-1)*T(t-dt)
 mat_inv = np.linalg.inv(matrice)
+
+T_in = np.zeros(len(time))
+T_plaf = np.zeros(len(time))
+T_mur = np.zeros(len(time))
+T_sol = np.zeros(len(time))
+T_ex = temp.to_numpy()
+T_surfterre = np.zeros(len(time))
+T_terre = 8     # Température constante à 8 deg C sous le puits
+
+# Conditions initiales:
+T_in[0] = np.nanmean(data.loc[0,"T[degC]-Low-S1":"T[degC]-Top-S29"].to_numpy())      # Température air interne initiale (moyenne dans le puits initiale)
+T_plaf[0] = np.nanmean(top[0,:])
+T_mur[0] = np.nanmean(mid[0,:])
+T_sol[0] = np.nanmean(low[0,:])
+T_surfterre[0] = T_ex[0]     # Assume surface de la terre température proche de l'air externe
+# faire un bilan de flux de chaleur pour trouver les autres températures initiales?
+
+énergie = 0
+for i in range(1,len(time)):
+    if T_ex[i-1] < 3:
+        q_aero = 60e3 * dt    #puissance*dt
+        énergie += q_aero
+    else:
+        q_aero = 0
+
+    output = np.matmul(mat_inv, [C_air * T_in[i-1]/dt + q_aero,
+                                 C_plafond * T_plaf[i-1]/dt,
+                                 C_mur * T_mur[i-1]/dt + 4/R_iso_mur,
+                                 C_plancher * T_sol[i-1]/dt + 8/R_plan_iso,
+                                 T_ex[i-1],
+                                 -4/R_iso_mur])
+    T_in[i], T_plaf[i], T_mur[i], T_sol[i], _, T_surfterre[i] = output
+
+if T_ex[-1] < 3:    # Sinon le dernier temps sera pas checké pour une dépense d'énergie
+    q_aero = 60e3 * dt
+    énergie += q_aero
+
+print(T_surfterre)
+
+print("Énergie totale consommée :", (énergie/1000)/360, "kWh")
