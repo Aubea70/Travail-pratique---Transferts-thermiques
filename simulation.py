@@ -125,8 +125,13 @@ if T_ex[0] < 0:
     q_aero[0] = 60e3
 
 # Calcul
+drop=False
 for i in range(1,len(time)):
-    if T_ex[i] < 0:
+    if T_in[i-1] > 35:
+        drop = True
+    elif T_in[i-1] < 15:
+        drop = False
+    if T_ex[i] < 0 and drop is False:
         q_aero[i] = 60e3    #puissance*dt
 
     output = np.matmul(mat_inv, [C_air * T_in[i-1]/dt + q_aero[i-1],
@@ -143,10 +148,12 @@ sim_data.to_csv("Simulated_temperatures.csv", index=False)
 
 énergie = sum(q_aero*dt)
 
-print("Énergie totale consommée :", (énergie/1000)/360, "kWh")
+print("Énergie totale consommée :", (énergie/1000)/3600, "kWh")
 
 plt.plot(time, T_in, label="Simulée")
 plt.plot(time, np.nanmean(data.loc[:,"T[degC]-Low-S1":"T[degC]-Top-S29"].to_numpy(), axis=1), label="Réelle")
+plt.plot(time, temp, label="Extérieure")
+plt.axhline(y=0, color="black", linestyle="--")
 plt.xlabel("Temps")
 plt.ylabel("Température [°C]")
 plt.legend()

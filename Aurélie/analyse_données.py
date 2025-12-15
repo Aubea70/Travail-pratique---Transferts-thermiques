@@ -86,9 +86,11 @@ def temp_evolution():
 def control_rules():
     plot_plates()
     plt.plot(time,temp, label="Outdoor")
+    plt.plot(time, humid, label="Humididty")
     plt.legend()
     plt.axhline(y=0, color='black', linestyle='--')
     plt.axhline(y=3, color='red', linestyle='--')
+    plt.axhline(y=95, color='blue', linestyle='--')
     plt.show()
 
 
@@ -133,10 +135,18 @@ if __name__ == "__main__":
     #control_rules()
     #space_temp(height="avg")
 
-    for i in range(29):
-        plt.plot(time, top[:,i], label=f"S{i}")
+    for i in [0,28]:
+        plt.plot(time, low[:,i], label=f"S{i+1}")
+    #mean_curve = np.nanmean(np.array([low[:,0], low[:,28]]), axis=0)
+    #plt.plot(time, mean_curve, label="Mean")
+    plt.plot(time,temp, label="Outdoor")
+    #plt.plot(time, temp/(humid/100), label="Humididty")
+    plt.legend()
+    plt.axhline(y=0, color='black', linestyle='--')
+    plt.axhline(y=3, color='red', linestyle='--')
+    plt.axhline(y=35, color='magenta', linestyle='--')
+    plt.axhline(y=20, color='cyan', linestyle='--')
     plt.rcParams['date.converter'] = 'concise'
     plt.xlabel("Date [-]")
     plt.ylabel("Température [°C]")
-    plt.legend()
     plt.show()
