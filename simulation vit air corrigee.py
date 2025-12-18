@@ -22,8 +22,6 @@ time = np.array([date.strptime(t, format) for t in time_str])
 # -----------------------
 
 dt = 120                 # pas de temps (s) = 2 min
-'''N_jours = 74            # durée de la simu (jours) ~ 4 mois
-N = int(N_jours * 24 * 3600 / dt)'''
 
 # Propriétés des matériaux et dimensions du puit
 
@@ -35,8 +33,8 @@ L, W, H = 26.1, 3.7, 1.7
 # Air
 V_air = L * W * H   # Vérifier si on enlève les colonnes de béton du volume
 C_air = rho_air * cp_air * V_air
-h_int = 10.45       # Mettre les sources des constantes dans le rapport
-h_ext = 27.8
+h_int = 5       # Mettre les sources des constantes dans le rapport
+h_ext = 10
 A_craques = 2e-3 * (W*7 + L*2)
 vit_air = 3.5    # vitesse moyenne de l'air en hiver[m/s]
 débit = rho_air*vit_air*A_craques/2     # divisé par 2 car moitié des craques entrée et l'autre moitié sortie
@@ -80,7 +78,7 @@ R_plaf_ext = R_plaf_ext_conv + R_dalle
 
 # Mur
 
-R_air_mur = R_air_mur_conv + R_mur_cond
+R_air_mur = R_air_mur_conv
 R_iso_mur= e_iso / (k_iso * A_mur) + R_mur_cond
 
 # Plancher
@@ -189,4 +187,5 @@ plt.axhline(y=0, color="black", linestyle="--")
 plt.xlabel("Temps")
 plt.ylabel("Température [°C]")
 plt.legend()
+
 plt.show()
