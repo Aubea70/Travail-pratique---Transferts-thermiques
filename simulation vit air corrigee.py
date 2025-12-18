@@ -33,8 +33,8 @@ L, W, H = 26.1, 3.7, 1.7
 # Air
 V_air = L * W * H   # Vérifier si on enlève les colonnes de béton du volume
 C_air = rho_air * cp_air * V_air
-h_int = 5       # Mettre les sources des constantes dans le rapport
-h_ext = 10
+h_int = 10       # Mettre les sources des constantes dans le rapport
+h_ext = 15
 A_craques = 2e-3 * (W*7 + L*2)
 vit_air = 3.5    # vitesse moyenne de l'air en hiver[m/s]
 débit = rho_air*vit_air*A_craques/2     # divisé par 2 car moitié des craques entrée et l'autre moitié sortie
@@ -189,3 +189,4 @@ plt.ylabel("Température [°C]")
 plt.legend()
 
 plt.show()
+
